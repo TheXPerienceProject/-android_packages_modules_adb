@@ -32,6 +32,7 @@ license {
 tidy_errors = [
     "-*",
     "bugprone-inaccurate-erase",
+    "bugprone-use-after-move",
 ]
 
 cc_defaults {
@@ -63,6 +64,10 @@ cc_defaults {
                 "-framework IOKit",
                 "-lobjc",
             ],
+            cflags: [
+                // Required, to use the new IPv6 Sockets options introduced by RFC 3542.
+                "-D__APPLE_USE_RFC_3542",
+            ],
         },
 
         windows: {
@@ -93,6 +98,7 @@ cc_defaults {
                 "-lws2_32",
                 "-lgdi32",
                 "-luserenv",
+                "-liphlpapi",
             ],
         },
     },
@@ -198,6 +204,7 @@ libadb_srcs = [
     "adb.cpp",
     "adb_io.cpp",
     "adb_listeners.cpp",
+    "adb_mdns.cpp",
     "adb_trace.cpp",
     "adb_unique_fd.cpp",
     "adb_utils.cpp",
@@ -250,13 +257,19 @@ cc_library_host_static {
     defaults: ["adb_defaults"],
 
     srcs: libadb_srcs + [
+        "client/openscreen/mdns_service_info.cpp",
+        "client/openscreen/mdns_service_watcher.cpp",
+        "client/openscreen/platform/logging.cpp",
+        "client/openscreen/platform/task_runner.cpp",
+        "client/openscreen/platform/udp_socket.cpp",
         "client/auth.cpp",
         "client/adb_wifi.cpp",
         "client/usb_libusb.cpp",
         "client/usb_dispatch.cpp",
         "client/transport_local.cpp",
-        "client/transport_mdns.cpp",
+        "client/mdnsresponder_client.cpp",
         "client/mdns_utils.cpp",
+        "client/transport_mdns.cpp",
         "client/transport_usb.cpp",
         "client/pairing/pairing_client.cpp",
     ],
@@ -296,6 +309,8 @@ cc_library_host_static {
         "libutils",
         "liblog",
         "libcutils",
+        "libopenscreen-discovery",
+        "libopenscreen-platform-impl",
         "libprotobuf-cpp-lite",
     ],
 }
@@ -361,6 +376,8 @@ cc_test_host {
         "liblog",
         "libmdnssd",
         "libdiagnose_usb",
+        "libopenscreen-discovery",
+        "libopenscreen-platform-impl",
         "libprotobuf-cpp-lite",
         "libssl",
         "libusb",
@@ -423,6 +440,8 @@ cc_binary_host {
         "liblog",
         "liblz4",
         "libmdnssd",
+        "libopenscreen-discovery",
+        "libopenscreen-platform-impl",
         "libprotobuf-cpp-full",
         "libssl",
         "libusb",
@@ -511,13 +530,11 @@ cc_library_static {
 
     target: {
         android: {
-            whole_static_libs: [
-                "libqemu_pipe",
-            ],
             srcs: [
-                "daemon/transport_qemu.cpp",
+                "daemon/property_monitor.cpp",
                 "daemon/usb.cpp",
                 "daemon/usb_ffs.cpp",
+                "daemon/watchdog.cpp",
             ]
         },
         recovery: {
@@ -793,6 +810,14 @@ cc_test {
 
     test_config: "adb_test.xml",
 
+    target: {
+        android: {
+            srcs: [
+                "daemon/property_monitor_test.cpp",
+            ],
+        },
+    },
+
     shared_libs: [
         "liblog",
     ],
@@ -924,6 +949,8 @@ cc_test_host {
         "libfastdeploy_host",
         "liblog",
         "libmdnssd",
+        "libopenscreen-discovery",
+        "libopenscreen-platform-impl",
         "libprotobuf-cpp-lite",
         "libssl",
         "libusb",
